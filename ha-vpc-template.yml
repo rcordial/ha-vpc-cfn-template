@@ -485,7 +485,7 @@ Resources:
     Type: "AWS::EC2::Route"
     Properties:
       RouteTableId:
-        Ref: "PrivateRouteTable1"
+        Ref: "PrivateRouteTable2"
       DestinationCidrBlock: "0.0.0.0/0"
       NatGatewayId:
         Ref: "NATGateway2"
