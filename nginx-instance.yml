@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Wireguard instance deployed in a VPC, in another stack"
+
+Parameters:
+  LatestAmiId:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+
+  SubnetId:
+    Description: "Subnet to deploy the Nginx server to"
+    Type: AWS::EC2::Subnet::Id
+
+  WireguardSG:
+    Description: "Wireguard security group"
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+
+  NginxSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Nginx-sg
+      GroupDescription: Nginx Security Group
+      VpcId: !ImportValue VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref WireguardSG
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref WireguardSG
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+  NginxInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3a.small
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref NginxSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -ex
+
+          yum -y update
+
+          amazon-linux-extras enable nginx1
+
+          yum -y install nginx
+
+          service nginx start
+
+          HOSTNAME=$(hostname)
+          IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+          cat > index.html <<EOF
+          <html>
+          <head>
+          <title>Hello</title>
+          </head>
+          <body>
+          <h1>Hello</h1>
+          <p>Hostname: $HOSTNAME</p>
+          <p>IP Address: $IP_ADDRESS</p>
+          </body>
+          </html>
+          EOF
