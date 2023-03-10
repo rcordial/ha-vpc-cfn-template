@@ -10,6 +10,10 @@ Parameters:
     Description: "Subnet to deploy the Nginx server to"
     Type: AWS::EC2::Subnet::Id
 
+  VPCId:
+    Description: "VPC to deploy Nginx"
+    Type: AWS::EC2::VPC::Id
+
   WireguardSG:
     Description: "Wireguard security group"
     Type: AWS::EC2::SecurityGroup::Id
@@ -21,7 +25,7 @@ Resources:
     Properties:
       GroupName: Nginx-sg
       GroupDescription: Nginx Security Group
-      VpcId: !ImportValue VPCId
+      VpcId: !Ref VPCId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -60,17 +64,9 @@ Resources:
           service nginx start
 
           HOSTNAME=$(hostname)
-          IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 
-          cat > index.html <<EOF
-          <html>
-          <head>
-          <title>Hello</title>
-          </head>
-          <body>
-          <h1>Hello</h1>
-          <p>Hostname: $HOSTNAME</p>
-          <p>IP Address: $IP_ADDRESS</p>
-          </body>
-          </html>
-          EOF
+          echo "Hello from $HOSTNAME" > /usr/share/nginx/html/index.html
+
+          yum update -y aws-cfn-bootstrap
+          
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WireguardInstance --region ${AWS::Region}
