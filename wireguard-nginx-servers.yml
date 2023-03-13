@@ -149,3 +149,9 @@ Resources:
           yum update -y aws-cfn-bootstrap
           
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource NginxInstance --region ${AWS::Region}
+
+Outputs:
+  WireguardIP:
+    Value: !GetAtt WireguardInstance.PublicIp
+  NginxPrivateIP:
+    Value: !GetAtt NginxInstance.PrivateIp
